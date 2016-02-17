@@ -1,0 +1,147 @@
+<html>
+    <head>
+        <style>
+            body {
+                font-family: Verdana;
+                font-size: 16pt;
+            }
+            
+            ul {
+                list-style-type: none;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                border: 1px solid #e7e7e7;
+                //background-color: #f3f3f3;
+                background-color: white;
+            }
+
+            li {
+                float: left;
+            }
+
+            li a {
+                display: block;
+                color: #666;
+                text-align: center;
+                padding: 14px 16px;
+                text-decoration: none;
+            }
+
+            li a:hover:not(.active) {
+                //background-color: #ddd;
+                background-color: red;
+                color: white;
+            }
+        </style>
+        <script src="https://sdk.amazonaws.com/js/aws-sdk-2.2.33.min.js"></script>
+        <script src="Chart.js"></script>
+        <script type="text/javascript">
+
+            function fetchService() {
+                var xhttp = new XMLHttpRequest();
+                xhttp.onreadystatechange = function() {
+                    if (xhttp.readyState == 4 && xhttp.status == 200) {
+                      document.getElementById("output").innerHTML = xhttp.responseText;
+                    }
+                };
+                xhttp.open("GET", "https://7b5jyzgwtf.execute-api.us-east-1.amazonaws.com/prod/cors_test", true);
+                xhttp.send();
+            }
+            
+            var myNewChart = null;
+            function drawChart() {
+                db = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10', region: "us-east-1" });
+                var params = {
+                    TableName : 'glucose',
+                    Key: 
+                    {
+                        uid: "amzn1.echo-sdk-account.AHRCT6FYJCNPWIEXOIIOYKO2NSSO4KXRGGG6UFTJX6EGKNIHBSXN6"
+                    }
+                };
+                db.get(params, function(err, data) {
+                    var chartData = {};
+                    chartData.labels = [];
+                    for (var i = 0; i < data.Item.sugar.length; i++) {
+                        chartData.labels.push(i);
+                    }
+                    chartData.datasets = [];
+                    var d = {
+                        label: "Glucose",
+                        fillColor: "rgba(220,220,220,0.2)",
+                        strokeColor: "rgba(220,220,220,1)",
+                        pointColor: "rgba(220,220,220,1)",
+                        pointStrokeColor: "#fff",
+                        pointHighlightFill: "#fff",
+                        pointHighlightStroke: "rgba(220,220,220,1)",
+                        data: data.Item.sugar
+                    };
+                    chartData.datasets.push(d);
+                    var ctx = document.getElementById("chartGlucose").getContext("2d");
+                    if (myNewChart != null) myNewChart.destroy();
+                    myNewChart = new Chart(ctx).Line(chartData);
+                    console.log(JSON.stringify(data, null, 2));
+                });
+            }
+        </script>
+    </head>
+<body>
+<div id="amazon-root"></div>
+<script type="text/javascript">
+
+  window.onAmazonLoginReady = function() {
+    amazon.Login.setClientId('amzn1.application-oa2-client.0f013ff3eb4e4b56b51277a0fad87029');
+  };
+  (function(d) {
+    var a = d.createElement('script'); a.type = 'text/javascript';
+    a.async = true; a.id = 'amazon-login-sdk';
+    a.src = 'https://api-cdn.amazon.com/sdk/login1.js';
+    d.getElementById('amazon-root').appendChild(a);
+  })(document);
+
+</script>
+    
+<ul>
+  <li><a href="">Doctor Fuse</a></li>
+  <li><a href="javascript:drawChart();">Refresh</a></li>
+  <ul style="float:right;list-style-type:none;background-color: red;color: white;">
+    <li><a style="color: white;" href="#" id="LoginWithAmazon">Login</a></li>
+  </ul>
+</ul>
+    
+<canvas id="chartGlucose" width="800" height="400"></canvas>
+    
+<script type="text/javascript">
+    var db;
+    document.getElementById('LoginWithAmazon').onclick = function() {
+        options = { scope : 'profile' };
+        amazon.Login.authorize(options, function(response) {
+            if (!response.error) { // logged in
+                creds = new AWS.WebIdentityCredentials({
+                    RoleArn: 'arn:aws:iam::520673680374:role/norjekudo2',
+                    ProviderId: 'www.amazon.com',
+                    WebIdentityToken: response.access_token
+                });
+                
+                amazon.Login.retrieveProfile(response.access_token, function (resp) {
+                    console.log(JSON.stringify(resp, null, 2));  
+                    document.getElementById("LoginWithAmazon").innerHTML = resp.profile.PrimaryEmail;
+                    drawChart();
+                });
+
+                AWS.config.update({
+                    credentials: creds,
+                    region: 'us-east-1'
+                });
+          
+          console.log('You are now logged in.');
+        } else {
+          console.log('There was a problem logging you in.');
+        }
+    });
+    return false;
+  };
+
+</script>
+</body>
+</html>
